@@ -10,8 +10,8 @@ const ShowEndings = ({ endings }: { endings: ValidEnding[] }) => {
     <>
       <h2 className={`${textColor} text-lg font-extrabold`}>{titleContent}</h2>
 
-      {endings.map((ending) => (
-        <div className="text-xl">
+      {endings.map((ending, idx) => (
+        <div className="text-xl" key={idx}>
           <p>
             <span className="font-extrabold">{ending.termAsDomain}</span> using
             the <span className="font-extrabold">{ending.ending}</span> ending
