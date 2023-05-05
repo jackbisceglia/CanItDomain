@@ -1,79 +1,65 @@
+"use client";
+
+import handle, { ValidEnding } from "./etc/handle";
+
 import ShowEndings from "./etc/ShowEndings";
-import { allDomainEndings } from "./etc/allEndings";
-import { redirect } from "next/navigation";
+import { experimental_useFormStatus as useFormStatus } from "react-dom";
+import { useState } from "react";
 
-export type ValidEnding = {
-  ending: string;
-  termAsDomain: string;
-};
+const Form = ({
+  serverAction,
+}: {
+  serverAction: (formData: FormData) => Promise<void>;
+}) => {
+  const [input, setInput] = useState<string>("");
 
-type State = {
-  domains: ValidEnding[];
-  formSubmitted: boolean;
-};
-
-const state: State = {
-  domains: [],
-  formSubmitted: false,
-};
-
-const trimDot = (end: string) => end.slice(1);
-
-const findValidEndingsByTerm = (term: string) => {
-  return allDomainEndings.filter((currentEnding) => {
-    const currentEndingNoDot = trimDot(currentEnding);
-
-    const termEnding = term?.slice(term.length - currentEndingNoDot.length);
-
-    return termEnding === currentEndingNoDot;
-  });
-};
-
-const handle = async (formData: FormData) => {
-  "use server";
-  const inputTerm = formData.get("term")?.toString();
-
-  if (!inputTerm) return;
-
-  const validEndings = findValidEndingsByTerm(inputTerm);
-
-  const formatted = validEndings.map((validEnding) => {
-    return {
-      ending: validEnding,
-      termAsDomain:
-        inputTerm?.slice(0, inputTerm.length - trimDot(validEnding).length) +
-        validEnding,
-    };
-  });
-
-  state.domains = [...formatted];
-  state.formSubmitted = true;
-  redirect("/");
+  return (
+    <form
+      action={async (formData: FormData) => {
+        await serverAction(formData);
+        setInput("");
+      }}
+      className="flex flex-col w-full gap-4 py-12 text-left"
+    >
+      <h2 className="text-xl font-normal sm:text-2xl">Enter Your Term</h2>
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="domain name here"
+        name="term"
+        id=""
+        className="px-6 py-3 text-base font-normal rounded-lg sm:text-lg text-fog-100 bg-fog-800"
+      />
+      <button
+        disabled={!input.length}
+        type="submit"
+        className="p-2 text-base font-semibold transition-all duration-300 border rounded-lg sm:text-lg disabled:cursor-not-allowed disabled:hover:bg-rose-500 disabled:hover:text-fog-900 text-fog-900 border-rose-500 bg-rose-500 hover:bg-rose-950 hover:text-fog-50"
+      >
+        Submit
+      </button>
+    </form>
+  );
 };
 
 export default function Home() {
+  const [domainEndings, setDomainEndings] = useState<ValidEnding[]>([]);
+  const [hasBeenFetched, setHasBeenFetched] = useState<boolean>(false);
+
+  const handleWrapper = async (formData: FormData) => {
+    const data = await handle(formData);
+
+    if (!data) return;
+    if (!hasBeenFetched) setHasBeenFetched(true);
+    if (!formData.get("term")) return;
+
+    setDomainEndings(data);
+  };
+
   return (
     <>
-      <form
-        action={handle}
-        className="flex flex-col w-full gap-4 py-12 text-left"
-      >
-        <h2 className="text-2xl font-normal">Enter Your Term</h2>
-        <input
-          type="text"
-          placeholder="canitdomain"
-          name="term"
-          id=""
-          className="px-6 py-3 text-lg font-normal rounded-lg text-fog-100 bg-fog-800"
-        />
-        <button
-          // type="submit"
-          className="p-2 text-lg font-semibold transition-all duration-300 border rounded-lg text-fog-900 border-rose-500 bg-rose-500 hover:bg-rose-950 hover:text-fog-50"
-        >
-          Submit
-        </button>
-      </form>
-      {state.formSubmitted && <ShowEndings endings={state.domains} />}
+      <Form serverAction={handleWrapper} />
+      {hasBeenFetched && <ShowEndings endings={domainEndings} />}
     </>
   );
 }
